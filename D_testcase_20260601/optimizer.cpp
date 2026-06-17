@@ -13,8 +13,8 @@ const double kOptimizationTimeLimitSec = 570.0;
 const std::size_t kTopSetupPaths = 50;
 const std::size_t kTopHoldPaths = 20;
 const std::size_t kWnsRepairSetupPaths = 10;
-const std::size_t kTnsCleanupSetupPaths = 1000;
-const std::size_t kTnsCleanupSinkLimit = 200;
+const std::size_t kTnsCleanupSetupPaths = 50000;
+const std::size_t kTnsCleanupSinkLimit = 1500;
 const std::size_t kMaxCandidatesPerIteration = 50000;
 const std::size_t kMaxExactEvaluationsPerIteration = 8192;
 const int kMaxNoImproveRounds = 2;
@@ -60,7 +60,9 @@ struct PathViolation {
 struct SinkStat {
     std::string name;
     int count = 0;
+    int launch_count = 0;
     double total_neg_slack = 0.0;
+    double launch_neg_slack = 0.0;
     double worst_slack = 0.0;
 };
 
@@ -411,6 +413,9 @@ bool betterCandidateOrder(const Metrics& cand, const Metrics& base, const Metric
     if (cand.wns_ss > base.wns_ss + kScoreEps) return true;
     if (cand.wns_ss < base.wns_ss - kScoreEps) return false;
 
+    if (cand.nvp_ss < base.nvp_ss) return true;
+    if (cand.nvp_ss > base.nvp_ss) return false;
+
     if (cand.tns_ss > base.tns_ss + kScoreEps) return true;
     if (cand.tns_ss < base.tns_ss - kScoreEps) return false;
 
@@ -437,6 +442,15 @@ bool setupImproves(const Metrics& cand, const Metrics& base) {
         cand.tns_ss >= base.tns_ss - 75.0 &&
         cand.nvp_ss + 50 < base.nvp_ss) return true;
     return false;
+}
+
+bool setupNvpImproves(const Metrics& cand, const Metrics& base) {
+    if (cand.nvp_ss >= base.nvp_ss) return false;
+    int nvp_gain = base.nvp_ss - cand.nvp_ss;
+    double wns_tol = nvp_gain >= 100 ? 0.010 : 0.006;
+    double tns_tol = nvp_gain >= 100 ? 120.0 : 40.0;
+    return cand.wns_ss >= base.wns_ss - wns_tol &&
+           cand.tns_ss >= base.tns_ss - tns_tol;
 }
 
 bool holdImproves(const Metrics& cand, const Metrics& base) {
@@ -470,13 +484,13 @@ bool acceptableForPhase(PhaseKind phase,
                    cand.wns_ss >= base.wns_ss - 1e-12 &&
                    holdProtected(cand, base, 0.004, 0.05);
         case PhaseKind::TnsCleanup:
-            return setupImproves(cand, base) &&
-                   setupProtected(cand, base, 0.006, 50.0) &&
-                   holdProtected(cand, base, 0.006, 0.08);
+            return (setupImproves(cand, base) || setupNvpImproves(cand, base)) &&
+                   setupProtected(cand, base, 0.010, 120.0) &&
+                   holdProtected(cand, base, 0.004, 0.04);
         case PhaseKind::GroupInsertion:
             return setupImproves(cand, base) &&
-                   setupProtected(cand, base, 0.008, 75.0) &&
-                   !holdSeverelyDegrades(cand, base, original);
+                   setupProtected(cand, base, 0.001, 0.25) &&
+                   holdProtected(cand, base, 0.001, 0.005);
         case PhaseKind::HoldRepair:
             return holdImproves(cand, base) &&
                    setupProtected(cand, base, 0.0005, 0.01);
@@ -505,13 +519,22 @@ bool betterCandidateForPhase(PhaseKind phase,
         if (cand.tns_ss < base.tns_ss - kScoreEps) return false;
         return betterCandidateOrder(cand, base, original);
     }
-    if (phase == PhaseKind::TnsCleanup || phase == PhaseKind::GroupInsertion) {
-        if (cand.wns_ss > base.wns_ss + kScoreEps) return true;
-        if (cand.wns_ss < base.wns_ss - kScoreEps) return false;
+    if (phase == PhaseKind::TnsCleanup) {
         if (cand.nvp_ss < base.nvp_ss) return true;
         if (cand.nvp_ss > base.nvp_ss) return false;
         if (cand.tns_ss > base.tns_ss + kScoreEps) return true;
         if (cand.tns_ss < base.tns_ss - kScoreEps) return false;
+        if (cand.wns_ss > base.wns_ss + kScoreEps) return true;
+        if (cand.wns_ss < base.wns_ss - kScoreEps) return false;
+        return betterCandidateOrder(cand, base, original);
+    }
+    if (phase == PhaseKind::GroupInsertion) {
+        if (cand.wns_ss > base.wns_ss + kScoreEps) return true;
+        if (cand.wns_ss < base.wns_ss - kScoreEps) return false;
+        if (cand.tns_ss > base.tns_ss + kScoreEps) return true;
+        if (cand.tns_ss < base.tns_ss - kScoreEps) return false;
+        if (cand.nvp_ss < base.nvp_ss) return true;
+        if (cand.nvp_ss > base.nvp_ss) return false;
         return betterCandidateOrder(cand, base, original);
     }
     if (phase == PhaseKind::HoldRepair) {
@@ -688,9 +711,11 @@ void addWnsRepairMoves(const std::unordered_map<std::string, ClockNode>& tree,
 }
 
 double tnsCleanupPriority(const SinkStat& stat) {
-    return 300.0 * static_cast<double>(stat.count)
-         + 4000.0 * stat.total_neg_slack
-         + 1000.0 * (-stat.worst_slack);
+    double net_count = static_cast<double>(stat.count) - 0.85 * static_cast<double>(stat.launch_count);
+    double net_slack = stat.total_neg_slack - 0.65 * stat.launch_neg_slack;
+    return 30000.0 * net_count
+         + 3000.0 * net_slack
+         + 2000.0 * (-stat.worst_slack);
 }
 
 void addTnsCleanupFocus(const std::unordered_map<std::string, ClockNode>& tree,
@@ -709,6 +734,11 @@ void addTnsCleanupFocus(const std::unordered_map<std::string, ClockNode>& tree,
         ++stat.count;
         stat.total_neg_slack += -violation.slack;
         stat.worst_slack = std::min(stat.worst_slack, violation.slack);
+
+        SinkStat& launch_stat = sink_stats[violation.launch];
+        launch_stat.name = violation.launch;
+        ++launch_stat.launch_count;
+        launch_stat.launch_neg_slack += -violation.slack;
     }
 
     std::vector<SinkStat> ranked_sinks;
@@ -733,6 +763,7 @@ void addTnsCleanupFocus(const std::unordered_map<std::string, ClockNode>& tree,
         if (sink_it == tree.end() || !sink_it->second.is_sink) continue;
 
         double priority = tnsCleanupPriority(stat);
+        if (priority <= 0.0 || stat.count == 0) continue;
         focus_sinks.insert(stat.name);
         node_priority[stat.name] += priority;
         addAncestorsForFocus(tree, stat.name, 0.65 * priority,
@@ -866,14 +897,15 @@ std::vector<Move> generateCandidateMoves(
         }
     }
 
-    if (phase == PhaseKind::GroupInsertion) {
+    if (phase == PhaseKind::TnsCleanup || phase == PhaseKind::GroupInsertion) {
         for (const auto& edge : focus_edges) {
             auto parent_it = tree.find(edge.first);
             auto child_it = tree.find(edge.second);
             if (parent_it == tree.end() || child_it == tree.end()) continue;
             double priority = std::max(0.0, node_priority[edge.second]);
             if (priority <= 0.0) continue;
-            addInsertionMoves(edge.first, edge.second, MoveKind::InsertInternal, 0.8 * priority,
+            double phase_weight = (phase == PhaseKind::TnsCleanup) ? 1.2 : 0.8;
+            addInsertionMoves(edge.first, edge.second, MoveKind::InsertInternal, phase_weight * priority,
                               cells, buf_lib, moves, seen);
         }
     }
@@ -996,9 +1028,9 @@ void Optimizer::runOptimization(std::unordered_map<std::string, ClockNode>& best
     const auto start_time = std::chrono::steady_clock::now();
     OptimizationLogger log;
     const PhaseConfig phases[] = {
-        {PhaseKind::WnsRepair, "WNS repair", 0.0, 120.0, 384, 3},
-        {PhaseKind::TnsCleanup, "TNS/NVP cleanup", 120.0, 360.0, 512, 3},
-        {PhaseKind::GroupInsertion, "group/ancestor insertion", 360.0, 480.0, 768, 2},
+        {PhaseKind::WnsRepair, "WNS repair", 0.0, 70.0, 384, 3},
+        {PhaseKind::TnsCleanup, "TNS/NVP cleanup", 70.0, 420.0, 768, 4},
+        {PhaseKind::GroupInsertion, "group/ancestor insertion", 420.0, 500.0, 768, 2},
         {PhaseKind::HoldRepair, "hold final repair", 480.0, 540.0, 384, 2},
         {PhaseKind::AreaRecovery, "area recovery", 540.0, 570.0, 512, 2}
     };

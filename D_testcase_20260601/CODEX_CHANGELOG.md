@@ -44,6 +44,15 @@
 - 加入 optimizer debug output。
   - 印出初始 score、每輪產生/評估 candidate 數、每輪最佳 score、elapsed time、最終 metrics、inserted buffer 數與 resize move 數。
 - 已重新 `make` 編譯成功。
+
+## 2026-06-17 修正 Candidate C++11 初始化錯誤
+
+- 修正 `optimizer.cpp` 在 `-std=c++11` 下無法編譯的問題。
+  - 錯誤原因是 `Candidate` struct 含有預設成員初始化，C++11 下無法用 `{...}` initializer list 直接 `push_back` 或建構。
+  - 在 `Candidate` 中加入明確的 default constructor 與 parameterized constructor。
+  - 保留原本 `candidates.push_back({...})` 與 `Candidate c{...}` 的寫法可正常使用。
+- 已重新 `make` 編譯成功。
+  - 僅剩 `collectSinksDfs` 未使用的 warning，不影響連結與執行。
 - 使用 testcase2 做 sanity run。
   - 約 14 秒完成。
   - 成功產生 `testcase2/modified_clk_tree.structure`。

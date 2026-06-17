@@ -136,8 +136,11 @@ bool Parser::parseDelayRpt(const std::string& filepath,
         line = trim(line);
         if (line.empty() || line[0] == '#') continue;
 
-        if (line.find("Clock Period:") == 0) {
-            clock_period = std::stod(trim(line.substr(13)));
+        if (line.find("Clock Period") == 0) {
+            size_t colon = line.find(':');
+            if (colon != std::string::npos) {
+                clock_period = std::stod(trim(line.substr(colon + 1)));
+            }
             continue;
         }
 
