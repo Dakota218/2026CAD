@@ -101,6 +101,26 @@ struct Move {
     double estimate = 0.0;
 };
 
+struct SearchResult {
+    bool found = false;
+    Move first_move;
+    Metrics metrics;
+    std::unordered_map<std::string, ClockNode> tree;
+    std::size_t evaluated = 0;
+    int next_new_buf_id = 0;
+    int sequence_len = 0;
+    int resize_count = 0;
+};
+
+struct BeamState {
+    Move first_move;
+    Metrics metrics;
+    std::unordered_map<std::string, ClockNode> tree;
+    int next_new_buf_id = 0;
+    int sequence_len = 0;
+    int resize_count = 0;
+};
+
 struct OptimizationLogger {
     std::ofstream out;
 
@@ -429,6 +449,25 @@ bool betterCandidateOrder(const Metrics& cand, const Metrics& base, const Metric
     if (cand.area > base.area + 1e-9) return false;
 
     return cand.nvp_ss + cand.nvp_ff < base.nvp_ss + base.nvp_ff;
+}
+
+bool betterOutputCandidate(const Metrics& cand, const Metrics& base, const Metrics& original) {
+    RobustScore cand_score = evaluateRobustScore(cand, original);
+    RobustScore base_score = evaluateRobustScore(base, original);
+
+    if (cand_score.robust > base_score.robust + kScoreEps) return true;
+    if (cand_score.robust < base_score.robust - kScoreEps) return false;
+
+    int cand_nvp = cand.nvp_ss + cand.nvp_ff;
+    int base_nvp = base.nvp_ss + base.nvp_ff;
+    if (cand_nvp < base_nvp) return true;
+    if (cand_nvp > base_nvp) return false;
+
+    if (cand.tns_ss > base.tns_ss + kScoreEps) return true;
+    if (cand.tns_ss < base.tns_ss - kScoreEps) return false;
+    if (cand.wns_ss > base.wns_ss + kScoreEps) return true;
+    if (cand.wns_ss < base.wns_ss - kScoreEps) return false;
+    return cand.area < base.area - 1e-9;
 }
 
 bool setupImproves(const Metrics& cand, const Metrics& base) {
@@ -982,6 +1021,141 @@ int countInsertedBuffers(const std::unordered_map<std::string, ClockNode>& tree)
     }
     return count;
 }
+
+int moveResizeCount(const Move& move) {
+    return move.kind == MoveKind::ResizeBuffer ? 1 : 0;
+}
+
+void updateSearchBest(SearchResult& result,
+                      PhaseKind phase,
+                      const Metrics& metrics,
+                      const std::unordered_map<std::string, ClockNode>& tree,
+                      const Move& first_move,
+                      int next_new_buf_id,
+                      int sequence_len,
+                      int resize_count,
+                      const Metrics& original) {
+    if (!result.found ||
+        betterCandidateForPhase(phase, metrics, result.metrics, original)) {
+        result.found = true;
+        result.metrics = metrics;
+        result.tree = tree;
+        result.first_move = first_move;
+        result.next_new_buf_id = next_new_buf_id;
+        result.sequence_len = sequence_len;
+        result.resize_count = resize_count;
+    }
+}
+
+SearchResult searchPhaseCandidates(
+        const std::string& root_name,
+        const std::unordered_map<std::string, ClockNode>& current_tree,
+        const std::unordered_map<std::string, BufferCell>& buf_lib,
+        const std::vector<DataPath>& ss_paths,
+        const std::vector<DataPath>& ff_paths,
+        double clock_period,
+        const Metrics& current_metrics,
+        const Metrics& original,
+        const std::vector<Move>& moves,
+        PhaseKind phase,
+        std::size_t exact_limit,
+        double phase_end_sec,
+        int next_new_buf_id,
+        const std::chrono::steady_clock::time_point& start_time) {
+    SearchResult result;
+    result.next_new_buf_id = next_new_buf_id;
+
+    const bool use_beam = phase == PhaseKind::TnsCleanup ||
+                          phase == PhaseKind::GroupInsertion;
+    const std::size_t beam_width = 6;
+    const std::size_t first_budget = use_beam ? std::max<std::size_t>(1, exact_limit / 2)
+                                              : exact_limit;
+    std::vector<BeamState> beam;
+
+    for (const auto& move : moves) {
+        if (result.evaluated >= first_budget ||
+            result.evaluated >= exact_limit ||
+            elapsedSec(start_time) >= phase_end_sec ||
+            isTimeLimitReached(start_time)) break;
+
+        auto trial_tree = current_tree;
+        int trial_next_new_buf_id = next_new_buf_id;
+        if (!applyMove(trial_tree, move, buf_lib, trial_next_new_buf_id)) continue;
+
+        TimingReport trial_report = analyzeTiming(root_name, trial_tree, buf_lib,
+                                                  ss_paths, ff_paths, clock_period);
+        ++result.evaluated;
+        if (!acceptableForPhase(phase, trial_report.metrics, current_metrics, original)) continue;
+
+        int resize_count = moveResizeCount(move);
+        updateSearchBest(result, phase, trial_report.metrics, trial_tree, move,
+                         trial_next_new_buf_id, 1, resize_count, original);
+
+        if (use_beam) {
+            BeamState state;
+            state.first_move = move;
+            state.metrics = trial_report.metrics;
+            state.tree = trial_tree;
+            state.next_new_buf_id = trial_next_new_buf_id;
+            state.sequence_len = 1;
+            state.resize_count = resize_count;
+            beam.push_back(state);
+        }
+    }
+
+    if (!use_beam || beam.empty()) {
+        return result;
+    }
+
+    std::sort(beam.begin(), beam.end(), [phase, &original](const BeamState& a, const BeamState& b) {
+        return betterCandidateForPhase(phase, a.metrics, b.metrics, original);
+    });
+    if (beam.size() > beam_width) beam.resize(beam_width);
+
+    for (std::size_t state_idx = 0; state_idx < beam.size(); ++state_idx) {
+        if (result.evaluated >= exact_limit ||
+            elapsedSec(start_time) >= phase_end_sec ||
+            isTimeLimitReached(start_time)) break;
+
+        const BeamState& state = beam[state_idx];
+        TimingReport state_report = analyzeTiming(root_name, state.tree, buf_lib,
+                                                  ss_paths, ff_paths, clock_period);
+        std::vector<Move> next_moves = generateCandidateMoves(state.tree, buf_lib,
+                                                              state_report, phase);
+        if (next_moves.empty()) continue;
+
+        std::size_t remaining_states = beam.size() - state_idx;
+        std::size_t remaining_budget = exact_limit - result.evaluated;
+        std::size_t per_state_budget = std::max<std::size_t>(1, remaining_budget / remaining_states);
+        per_state_budget = std::min<std::size_t>(per_state_budget, 160);
+        std::size_t expanded = 0;
+
+        for (const auto& move : next_moves) {
+            if (expanded >= per_state_budget ||
+                result.evaluated >= exact_limit ||
+                elapsedSec(start_time) >= phase_end_sec ||
+                isTimeLimitReached(start_time)) break;
+
+            auto trial_tree = state.tree;
+            int trial_next_new_buf_id = state.next_new_buf_id;
+            if (!applyMove(trial_tree, move, buf_lib, trial_next_new_buf_id)) continue;
+
+            TimingReport trial_report = analyzeTiming(root_name, trial_tree, buf_lib,
+                                                      ss_paths, ff_paths, clock_period);
+            ++result.evaluated;
+            ++expanded;
+            if (!acceptableForPhase(phase, trial_report.metrics, current_metrics, original)) continue;
+
+            updateSearchBest(result, phase, trial_report.metrics, trial_tree,
+                             state.first_move, trial_next_new_buf_id,
+                             state.sequence_len + 1,
+                             state.resize_count + moveResizeCount(move),
+                             original);
+        }
+    }
+
+    return result;
+}
 }
 
 Optimizer::Optimizer(const std::string& r_name,
@@ -1108,42 +1282,18 @@ void Optimizer::runOptimization(std::unordered_map<std::string, ClockNode>& best
                       << " | exact limit: " << phase.exact_limit << "\n";
             std::cout.flush();
 
-            Move best_move;
-            Metrics best_candidate_metrics;
-            bool has_candidate = false;
-            std::unordered_map<std::string, ClockNode> best_candidate_tree;
-            std::size_t evaluated = 0;
+            SearchResult search_result = searchPhaseCandidates(
+                root_name, current_tree, buf_lib, ss_paths, ff_paths, clock_period,
+                current_metrics, original, moves, phase.kind, phase.exact_limit,
+                phase.end_sec, next_new_buf_id, start_time);
 
-            for (const auto& move : moves) {
-                if (evaluated >= phase.exact_limit ||
-                    elapsedSec(start_time) >= phase.end_sec ||
-                    isTimeLimitReached(start_time)) break;
-
-                auto trial_tree = current_tree;
-                int trial_next_new_buf_id = next_new_buf_id;
-                if (!applyMove(trial_tree, move, buf_lib, trial_next_new_buf_id)) continue;
-
-                TimingReport trial_report = analyzeTiming(root_name, trial_tree, buf_lib,
-                                                          ss_paths, ff_paths, clock_period);
-                ++evaluated;
-                if (!acceptableForPhase(phase.kind, trial_report.metrics, current_metrics, original)) continue;
-
-                if (!has_candidate ||
-                    betterCandidateForPhase(phase.kind, trial_report.metrics, best_candidate_metrics, original)) {
-                    has_candidate = true;
-                    best_candidate_metrics = trial_report.metrics;
-                    best_candidate_tree = trial_tree;
-                    best_move = move;
-                }
-            }
-
-            if (!has_candidate) {
+            if (!search_result.found) {
                 std::cout << "[OPT] " << phase.name << " iteration " << phase_iter
-                          << " | evaluated: " << evaluated
+                          << " | evaluated: " << search_result.evaluated
                           << " | no acceptable phase candidate"
                           << " | elapsed: " << elapsedSec(start_time) << " sec\n";
                 log.line("- Iteration " + std::to_string(phase_iter) +
-                         ": evaluated " + std::to_string(evaluated) +
+                         ": evaluated " + std::to_string(search_result.evaluated) +
                          ", no acceptable candidate.");
                 ++no_improve_rounds;
                 if (no_improve_rounds >= phase.max_no_improve_rounds) break;
@@ -1151,36 +1301,36 @@ void Optimizer::runOptimization(std::unordered_map<std::string, ClockNode>& best
             }
 
             std::cout << "[OPT] " << phase.name << " iteration " << phase_iter
-                      << " | evaluated: " << evaluated
+                      << " | evaluated: " << search_result.evaluated
+                      << " | sequence length: " << search_result.sequence_len
                       << " | best SS TNS/WNS/NVP: "
-                      << best_candidate_metrics.tns_ss << "/" << best_candidate_metrics.wns_ss << "/" << best_candidate_metrics.nvp_ss
+                      << search_result.metrics.tns_ss << "/" << search_result.metrics.wns_ss << "/" << search_result.metrics.nvp_ss
                       << " | FF TNS/WNS/NVP: "
-                      << best_candidate_metrics.tns_ff << "/" << best_candidate_metrics.wns_ff << "/" << best_candidate_metrics.nvp_ff
-                      << " | robust score: " << evaluateRobustScore(best_candidate_metrics, original).robust
-                      << " | area: " << best_candidate_metrics.area
+                      << search_result.metrics.tns_ff << "/" << search_result.metrics.wns_ff << "/" << search_result.metrics.nvp_ff
+                      << " | robust score: " << evaluateRobustScore(search_result.metrics, original).robust
+                      << " | area: " << search_result.metrics.area
                       << " | elapsed: " << elapsedSec(start_time) << " sec\n";
 
             log.line("- Iteration " + std::to_string(phase_iter) +
                      ": accepted " + std::string(phaseName(phase.kind)) +
-                     " move; evaluated " + std::to_string(evaluated) +
-                     "; SS TNS/WNS/NVP " + std::to_string(best_candidate_metrics.tns_ss) + "/" +
-                     std::to_string(best_candidate_metrics.wns_ss) + "/" +
-                     std::to_string(best_candidate_metrics.nvp_ss) +
-                     "; FF TNS/WNS/NVP " + std::to_string(best_candidate_metrics.tns_ff) + "/" +
-                     std::to_string(best_candidate_metrics.wns_ff) + "/" +
-                     std::to_string(best_candidate_metrics.nvp_ff) +
-                     "; area " + std::to_string(best_candidate_metrics.area) + ".");
+                     " sequence; evaluated " + std::to_string(search_result.evaluated) +
+                     "; sequence length " + std::to_string(search_result.sequence_len) +
+                     "; SS TNS/WNS/NVP " + std::to_string(search_result.metrics.tns_ss) + "/" +
+                     std::to_string(search_result.metrics.wns_ss) + "/" +
+                     std::to_string(search_result.metrics.nvp_ss) +
+                     "; FF TNS/WNS/NVP " + std::to_string(search_result.metrics.tns_ff) + "/" +
+                     std::to_string(search_result.metrics.wns_ff) + "/" +
+                     std::to_string(search_result.metrics.nvp_ff) +
+                     "; area " + std::to_string(search_result.metrics.area) + ".");
 
-            current_tree = best_candidate_tree;
-            current_metrics = best_candidate_metrics;
-            ++applied_moves;
-            if (best_move.kind == MoveKind::ResizeBuffer) ++resize_moves;
-            if (best_move.kind != MoveKind::ResizeBuffer) {
-                next_new_buf_id = findNextNewBufferId(current_tree);
-            }
+            current_tree = search_result.tree;
+            current_metrics = search_result.metrics;
+            applied_moves += search_result.sequence_len;
+            resize_moves += search_result.resize_count;
+            next_new_buf_id = search_result.next_new_buf_id;
             no_improve_rounds = 0;
 
-            if (betterCandidateOrder(current_metrics, best_metrics, original)) {
+            if (betterOutputCandidate(current_metrics, best_metrics, original)) {
                 best_metrics = current_metrics;
                 best_tree = current_tree;
                 best_score = evaluateRobustScore(best_metrics, original).robust;
