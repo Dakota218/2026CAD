@@ -63,6 +63,7 @@ int main(int argc, char* argv[]) {
     TimingEngine initial_engine(root_name, clock_tree, buf_lib, ss_paths, ff_paths, clock_period_ss);
     double init_tns_ss, init_wns_ss, init_tns_ff, init_wns_ff, init_area;
     initial_engine.evaluateMetrics(init_tns_ss, init_wns_ss, init_tns_ff, init_wns_ff, init_area);
+    TimingMetrics init_metrics = initial_engine.metrics();
     
     std::cout << "\n[BASELINE METRICS]:\n";
     std::cout << "  SS Corner -> TNS: " << init_tns_ss << " | WNS: " << init_wns_ss << "\n";
@@ -81,6 +82,7 @@ int main(int argc, char* argv[]) {
     TimingEngine final_engine(root_name, optimized_tree, buf_lib, ss_paths, ff_paths, clock_period_ss);
     double final_tns_ss, final_wns_ss, final_tns_ff, final_wns_ff, final_area;
     final_engine.evaluateMetrics(final_tns_ss, final_wns_ss, final_tns_ff, final_wns_ff, final_area);
+    TimingMetrics final_metrics = final_engine.metrics();
 
     std::cout << "\n[OPTIMIZED METRICS]:\n";
     std::cout << "  SS Corner -> TNS: " << final_tns_ss << " | WNS: " << final_wns_ss << "\n";
@@ -91,6 +93,29 @@ int main(int argc, char* argv[]) {
     std::cout << "\n[OUTPUT] Serializing structural netlist to output stream...\n";
     Parser::writeOutput(output_filepath, root_name, optimized_tree);
     std::cout << "[SUCCESS] File saved to: " << output_filepath << "\n";
+
+    double area_delta_pct = init_area == 0.0 ? 0.0 : 100.0 * (final_area - init_area) / init_area;
+    std::cout << "\n[FINAL SUMMARY]\n";
+    std::cout << "Original:\n";
+    std::cout << "SS WNS = " << init_metrics.wns_ss
+              << ", TNS = " << init_metrics.tns_ss
+              << ", NVP = " << init_metrics.nvp_ss << "\n";
+    std::cout << "FF WNS = " << init_metrics.wns_ff
+              << ", TNS = " << init_metrics.tns_ff
+              << ",  NVP = " << init_metrics.nvp_ff << "\n\n";
+
+    std::cout << "Modified:\n";
+    std::cout << "SS WNS = " << final_metrics.wns_ss
+              << ", TNS = " << final_metrics.tns_ss
+              << ", NVP = " << final_metrics.nvp_ss << "\n";
+    std::cout << "FF WNS = " << final_metrics.wns_ff
+              << ", TNS = " << final_metrics.tns_ff
+              << ",  NVP = " << final_metrics.nvp_ff << "\n\n";
+
+    std::cout << "Area:\n";
+    std::cout << init_area << " -> " << final_area
+              << " (" << (area_delta_pct >= 0.0 ? "+" : "")
+              << area_delta_pct << "%)\n";
     std::cout << "=========================================================\n";
 
     return 0;

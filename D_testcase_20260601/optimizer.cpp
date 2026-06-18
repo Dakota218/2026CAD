@@ -76,6 +76,18 @@ struct Metrics {
     double area = 0.0;
 };
 
+Metrics toMetrics(const TimingMetrics& timing_metrics) {
+    Metrics metrics;
+    metrics.tns_ss = timing_metrics.tns_ss;
+    metrics.wns_ss = timing_metrics.wns_ss;
+    metrics.nvp_ss = timing_metrics.nvp_ss;
+    metrics.tns_ff = timing_metrics.tns_ff;
+    metrics.wns_ff = timing_metrics.wns_ff;
+    metrics.nvp_ff = timing_metrics.nvp_ff;
+    metrics.area = timing_metrics.area;
+    return metrics;
+}
+
 struct TimingReport {
     Metrics metrics;
     std::vector<PathViolation> ss_violations;
@@ -100,6 +112,34 @@ struct Move {
     int chain_len = 0;
     double estimate = 0.0;
 };
+
+struct ChainCandidate {
+    std::string first_type;
+    std::string second_type;
+    std::string third_type;
+    int chain_len = 0;
+    double ss_delay = 0.0;
+    double ff_delay = 0.0;
+    double area = 0.0;
+};
+
+TimingMove toTimingMove(const Move& move) {
+    TimingMove timing_move;
+    if (move.kind == MoveKind::ResizeBuffer) {
+        timing_move.kind = TimingMoveKind::ResizeBuffer;
+        timing_move.node = move.node;
+        timing_move.new_type = move.first_type;
+        return timing_move;
+    }
+
+    timing_move.kind = TimingMoveKind::InsertChain;
+    timing_move.parent = move.parent;
+    timing_move.child = move.child;
+    if (move.chain_len >= 1) timing_move.chain_types.push_back(move.first_type);
+    if (move.chain_len >= 2) timing_move.chain_types.push_back(move.second_type);
+    if (move.chain_len >= 3) timing_move.chain_types.push_back(move.third_type);
+    return timing_move;
+}
 
 struct SearchResult {
     bool found = false;
@@ -664,28 +704,72 @@ void addInsertionMoves(const std::string& parent,
     }
 }
 
-double chainSsDelay(const Move& move,
-                    const std::unordered_map<std::string, BufferCell>& buf_lib) {
-    double delay = 0.0;
-    if (move.chain_len >= 1) delay += nodeDelay(buf_lib, move.first_type, 1, true);
-    if (move.chain_len >= 2) delay += nodeDelay(buf_lib, move.second_type, 1, true);
-    if (move.chain_len >= 3) delay += nodeDelay(buf_lib, move.third_type, 1, true);
-    return delay;
+std::vector<ChainCandidate> buildChainLookup(
+        const std::vector<std::string>& cells,
+        const std::unordered_map<std::string, BufferCell>& buf_lib) {
+    std::vector<ChainCandidate> lut;
+    for (const auto& first : cells) {
+        if (buf_lib.at(first).max_fanout < 1) continue;
+        ChainCandidate one;
+        one.first_type = first;
+        one.chain_len = 1;
+        one.ss_delay = nodeDelay(buf_lib, first, 1, true);
+        one.ff_delay = nodeDelay(buf_lib, first, 1, false);
+        one.area = cellArea(buf_lib, first);
+        lut.push_back(one);
+
+        for (const auto& second : cells) {
+            if (buf_lib.at(second).max_fanout < 1) continue;
+            ChainCandidate two = one;
+            two.second_type = second;
+            two.chain_len = 2;
+            two.ss_delay += nodeDelay(buf_lib, second, 1, true);
+            two.ff_delay += nodeDelay(buf_lib, second, 1, false);
+            two.area += cellArea(buf_lib, second);
+            lut.push_back(two);
+
+            for (const auto& third : cells) {
+                if (buf_lib.at(third).max_fanout < 1) continue;
+                ChainCandidate three = two;
+                three.third_type = third;
+                three.chain_len = 3;
+                three.ss_delay += nodeDelay(buf_lib, third, 1, true);
+                three.ff_delay += nodeDelay(buf_lib, third, 1, false);
+                three.area += cellArea(buf_lib, third);
+                lut.push_back(three);
+            }
+        }
+    }
+
+    std::sort(lut.begin(), lut.end(), [](const ChainCandidate& a, const ChainCandidate& b) {
+        if (a.ss_delay != b.ss_delay) return a.ss_delay < b.ss_delay;
+        if (a.area != b.area) return a.area < b.area;
+        return a.chain_len < b.chain_len;
+    });
+    return lut;
 }
 
-double chainArea(const Move& move,
-                 const std::unordered_map<std::string, BufferCell>& buf_lib) {
-    double area = 0.0;
-    if (move.chain_len >= 1) area += cellArea(buf_lib, move.first_type);
-    if (move.chain_len >= 2) area += cellArea(buf_lib, move.second_type);
-    if (move.chain_len >= 3) area += cellArea(buf_lib, move.third_type);
-    return area;
+std::vector<ChainCandidate> synthesizeChainsForTarget(
+        const std::vector<ChainCandidate>& lut,
+        double target_delta,
+        std::size_t max_results) {
+    std::vector<ChainCandidate> candidates = lut;
+    std::sort(candidates.begin(), candidates.end(),
+              [target_delta](const ChainCandidate& a, const ChainCandidate& b) {
+        double a_error = std::abs(a.ss_delay - target_delta);
+        double b_error = std::abs(b.ss_delay - target_delta);
+        if (a_error != b_error) return a_error < b_error;
+        if (a.area != b.area) return a.area < b.area;
+        return a.chain_len < b.chain_len;
+    });
+    if (candidates.size() > max_results) candidates.resize(max_results);
+    return candidates;
 }
 
 void addWnsRepairMoves(const std::unordered_map<std::string, ClockNode>& tree,
                        const std::unordered_map<std::string, BufferCell>& buf_lib,
                        const TimingReport& report,
-                       const std::vector<std::string>& cells,
+                       const std::vector<ChainCandidate>& chain_lut,
                        std::vector<Move>& moves,
                        std::unordered_set<std::string>& seen) {
     std::size_t ss_count = std::min(kWnsRepairSetupPaths, report.ss_violations.size());
@@ -698,53 +782,21 @@ void addWnsRepairMoves(const std::unordered_map<std::string, ClockNode>& tree,
         const double rank_bonus = static_cast<double>(ss_count - i) * 1000000.0;
         const std::string& parent = capture_it->second.parent;
         const std::string& child = violation.capture;
+        std::vector<ChainCandidate> chains = synthesizeChainsForTarget(chain_lut, need_delay, 8);
 
-        for (const auto& first : cells) {
-            if (buf_lib.at(first).max_fanout < 1) continue;
-
-            Move one;
-            one.kind = MoveKind::InsertLeaf;
-            one.parent = parent;
-            one.child = child;
-            one.first_type = first;
-            one.chain_len = 1;
-            one.estimate = 1000000000.0 + rank_bonus
-                         - 100000.0 * std::abs(chainSsDelay(one, buf_lib) - need_delay)
-                         - 1000.0 * chainArea(one, buf_lib);
-            pushUniqueMove(one, moves, seen);
-
-            for (const auto& second : cells) {
-                if (buf_lib.at(second).max_fanout < 1) continue;
-
-                Move two;
-                two.kind = MoveKind::InsertLeaf;
-                two.parent = parent;
-                two.child = child;
-                two.first_type = first;
-                two.second_type = second;
-                two.chain_len = 2;
-                two.estimate = 1000000000.0 + rank_bonus
-                             - 100000.0 * std::abs(chainSsDelay(two, buf_lib) - need_delay)
-                             - 1000.0 * chainArea(two, buf_lib);
-                pushUniqueMove(two, moves, seen);
-
-                for (const auto& third : cells) {
-                    if (buf_lib.at(third).max_fanout < 1) continue;
-
-                    Move three;
-                    three.kind = MoveKind::InsertLeaf;
-                    three.parent = parent;
-                    three.child = child;
-                    three.first_type = first;
-                    three.second_type = second;
-                    three.third_type = third;
-                    three.chain_len = 3;
-                    three.estimate = 1000000000.0 + rank_bonus
-                                   - 100000.0 * std::abs(chainSsDelay(three, buf_lib) - need_delay)
-                                   - 1000.0 * chainArea(three, buf_lib);
-                    pushUniqueMove(three, moves, seen);
-                }
-            }
+        for (const auto& chain : chains) {
+            Move move;
+            move.kind = MoveKind::InsertLeaf;
+            move.parent = parent;
+            move.child = child;
+            move.first_type = chain.first_type;
+            move.second_type = chain.second_type;
+            move.third_type = chain.third_type;
+            move.chain_len = chain.chain_len;
+            move.estimate = 1000000000.0 + rank_bonus
+                         - 100000.0 * std::abs(chain.ss_delay - need_delay)
+                         - 1000.0 * chain.area;
+            pushUniqueMove(move, moves, seen);
         }
     }
 }
@@ -847,6 +899,7 @@ std::vector<Move> generateCandidateMoves(
     std::vector<Move> moves;
     std::unordered_set<std::string> seen;
     std::vector<std::string> cells = sortedCellNames(buf_lib);
+    std::vector<ChainCandidate> chain_lut = buildChainLookup(cells, buf_lib);
     std::unordered_map<std::string, double> node_priority;
     std::unordered_set<std::string> focus_sinks;
     std::unordered_set<std::string> focus_nodes;
@@ -864,7 +917,7 @@ std::vector<Move> generateCandidateMoves(
     }
 
     if (phase == PhaseKind::WnsRepair) {
-        addWnsRepairMoves(tree, buf_lib, report, cells, moves, seen);
+        addWnsRepairMoves(tree, buf_lib, report, chain_lut, moves, seen);
     }
 
     if (phase == PhaseKind::TnsCleanup || phase == PhaseKind::GroupInsertion) {
@@ -1071,6 +1124,7 @@ SearchResult searchPhaseCandidates(
     const std::size_t first_budget = use_beam ? std::max<std::size_t>(1, exact_limit / 2)
                                               : exact_limit;
     std::vector<BeamState> beam;
+    TimingEngine current_engine(root_name, current_tree, buf_lib, ss_paths, ff_paths, clock_period);
 
     for (const auto& move : moves) {
         if (result.evaluated >= first_budget ||
@@ -1078,23 +1132,24 @@ SearchResult searchPhaseCandidates(
             elapsedSec(start_time) >= phase_end_sec ||
             isTimeLimitReached(start_time)) break;
 
+        IncrementalEvalResult eval = current_engine.evaluateMove(toTimingMove(move));
+        if (!eval.legal) continue;
+        Metrics trial_metrics = toMetrics(eval.metrics);
+        ++result.evaluated;
+        if (!acceptableForPhase(phase, trial_metrics, current_metrics, original)) continue;
+
         auto trial_tree = current_tree;
         int trial_next_new_buf_id = next_new_buf_id;
         if (!applyMove(trial_tree, move, buf_lib, trial_next_new_buf_id)) continue;
 
-        TimingReport trial_report = analyzeTiming(root_name, trial_tree, buf_lib,
-                                                  ss_paths, ff_paths, clock_period);
-        ++result.evaluated;
-        if (!acceptableForPhase(phase, trial_report.metrics, current_metrics, original)) continue;
-
         int resize_count = moveResizeCount(move);
-        updateSearchBest(result, phase, trial_report.metrics, trial_tree, move,
+        updateSearchBest(result, phase, trial_metrics, trial_tree, move,
                          trial_next_new_buf_id, 1, resize_count, original);
 
         if (use_beam) {
             BeamState state;
             state.first_move = move;
-            state.metrics = trial_report.metrics;
+            state.metrics = trial_metrics;
             state.tree = trial_tree;
             state.next_new_buf_id = trial_next_new_buf_id;
             state.sequence_len = 1;
@@ -1104,6 +1159,11 @@ SearchResult searchPhaseCandidates(
     }
 
     if (!use_beam || beam.empty()) {
+        if (result.found) {
+            TimingReport exact_report = analyzeTiming(root_name, result.tree, buf_lib,
+                                                      ss_paths, ff_paths, clock_period);
+            result.metrics = exact_report.metrics;
+        }
         return result;
     }
 
@@ -1123,6 +1183,7 @@ SearchResult searchPhaseCandidates(
         std::vector<Move> next_moves = generateCandidateMoves(state.tree, buf_lib,
                                                               state_report, phase);
         if (next_moves.empty()) continue;
+        TimingEngine state_engine(root_name, state.tree, buf_lib, ss_paths, ff_paths, clock_period);
 
         std::size_t remaining_states = beam.size() - state_idx;
         std::size_t remaining_budget = exact_limit - result.evaluated;
@@ -1136,22 +1197,29 @@ SearchResult searchPhaseCandidates(
                 elapsedSec(start_time) >= phase_end_sec ||
                 isTimeLimitReached(start_time)) break;
 
+            IncrementalEvalResult eval = state_engine.evaluateMove(toTimingMove(move));
+            if (!eval.legal) continue;
+            Metrics trial_metrics = toMetrics(eval.metrics);
+            ++result.evaluated;
+            ++expanded;
+            if (!acceptableForPhase(phase, trial_metrics, current_metrics, original)) continue;
+
             auto trial_tree = state.tree;
             int trial_next_new_buf_id = state.next_new_buf_id;
             if (!applyMove(trial_tree, move, buf_lib, trial_next_new_buf_id)) continue;
 
-            TimingReport trial_report = analyzeTiming(root_name, trial_tree, buf_lib,
-                                                      ss_paths, ff_paths, clock_period);
-            ++result.evaluated;
-            ++expanded;
-            if (!acceptableForPhase(phase, trial_report.metrics, current_metrics, original)) continue;
-
-            updateSearchBest(result, phase, trial_report.metrics, trial_tree,
+            updateSearchBest(result, phase, trial_metrics, trial_tree,
                              state.first_move, trial_next_new_buf_id,
                              state.sequence_len + 1,
                              state.resize_count + moveResizeCount(move),
                              original);
         }
+    }
+
+    if (result.found) {
+        TimingReport exact_report = analyzeTiming(root_name, result.tree, buf_lib,
+                                                  ss_paths, ff_paths, clock_period);
+        result.metrics = exact_report.metrics;
     }
 
     return result;
