@@ -1,0 +1,34 @@
+[OPTIMIZED METRICS]:
+  SS Corner -> TNS: -4.3789 | WNS: -0.0348
+  FF Corner -> TNS: 0 | WNS: 0
+  Total Optimized Buffer Area: 1233.36
+
+[OUTPUT] Serializing structural netlist to output stream...
+[SUCCESS] File saved to: ./testcase2/modified_clk_tree.structure
+
+[FINAL SUMMARY]
+Original:
+SS WNS = -0.302, TNS = -98.6976, NVP = 2157
+FF WNS = -0.0298, TNS = -0.1034,  NVP = 5
+
+Modified:
+SS WNS = -0.0348, TNS = -4.3789, NVP = 369
+FF WNS = 0, TNS = 0,  NVP = 0
+
+Area:
+980.414 -> 1233.36 (+25.8003%)
+
+
+
+[FINAL SUMMARY]
+Original:
+SS WNS = -0.302, TNS = -98.6976, NVP = 2157
+FF WNS = -0.0298, TNS = -0.1034,  NVP = 5
+
+Modified:
+SS WNS = -0.0315, TNS = -4.0352, NVP = 345
+FF WNS = 0, TNS = 0,  NVP = 0
+
+Area:
+980.414 -> 1247.05 (+27.1961%)
+=================================

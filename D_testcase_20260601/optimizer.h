@@ -8,6 +8,59 @@
 #include <vector>
 #include <string>
 
+enum class OptimizationMode {
+    TimingAggressive,
+    DownsizeForDelay,
+    HoldRepair,
+    BalancedCleanup
+};
+
+enum class CandidateMoveKind {
+    InsertLeaf,
+    ResizeBuffer,
+    InsertInternal
+};
+
+enum class CandidateDirection {
+    CaptureSide,
+    LaunchSide,
+    Neutral
+};
+
+struct CandidateMove {
+    CandidateMoveKind kind = CandidateMoveKind::ResizeBuffer;
+    std::string parent;
+    std::string child;
+    std::string node;
+    std::string first_type;
+    std::string second_type;
+    std::string third_type;
+    std::vector<std::string> chain_types;
+    int chain_len = 0;
+    double estimate = 0.0;
+    CandidateDirection direction = CandidateDirection::Neutral;
+    std::string old_type;
+};
+
+struct MoveEvaluation {
+    bool legal = false;
+    CandidateMove move;
+    TimingMetrics metrics;
+    ScoreTerms score_terms;
+    int affected_sinks = 0;
+    int affected_setup_paths = 0;
+    int affected_hold_paths = 0;
+};
+
+struct ModeResult {
+    std::string name;
+    TimingMetrics metrics;
+    std::unordered_map<std::string, ClockNode> tree;
+    OptimizationMode mode = OptimizationMode::BalancedCleanup;
+    ScoreTerms score_terms;
+    double runtime_sec = 0.0;
+};
+
 class Optimizer {
 private:
     std::string root_name;

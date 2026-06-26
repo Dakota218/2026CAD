@@ -2,10 +2,4 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-TC="testcase3"
-
-cd "$ROOT"
-make clean
-make
-./cadd0016 "./$TC" "./$TC/modified_clk_tree.structure"
-./checker "$ROOT/$TC/clk_tree.structure" "$ROOT/$TC/modified_clk_tree.structure" "$ROOT/$TC/buf.lib" "$ROOT/$TC/FF_delay.rpt" "$ROOT/$TC/SS_delay.rpt"
+exec "$ROOT/run_testcase.sh" testcase3

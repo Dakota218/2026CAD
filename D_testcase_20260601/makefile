@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -O3 -std=c++11 -Wall
+CXXFLAGS = -O3 -std=c++17 -Wall
 
 # Target executable name
 TARGET = cadd0016

@@ -19,6 +19,16 @@ struct TimingMetrics {
     double area = 0.0;
 };
 
+struct ScoreTerms {
+    double ss_tns = 0.0;
+    double ss_wns = 0.0;
+    double ff_tns = 0.0;
+    double ff_wns = 0.0;
+    double area = 0.0;
+    double timing_score = 0.0;
+    double robust_score = 0.0;
+};
+
 enum class TimingMoveKind {
     ResizeBuffer,
     InsertChain
@@ -31,6 +41,14 @@ struct TimingMove {
     std::string parent;
     std::string child;
     std::vector<std::string> chain_types;
+    // Required only when committing an insertion to the engine. Candidate
+    // evaluation needs types but deliberately does not allocate names.
+    std::vector<std::string> chain_node_names;
+};
+
+struct TimingRollback {
+    bool valid = false;
+    std::unordered_map<std::string, ClockNode> previous_tree;
 };
 
 struct IncrementalEvalResult {
@@ -38,6 +56,8 @@ struct IncrementalEvalResult {
     TimingMetrics metrics;
     int affected_sink_count = 0;
     int affected_path_count = 0;
+    int affected_setup_path_count = 0;
+    int affected_hold_path_count = 0;
     double delta_ss = 0.0;
     double delta_ff = 0.0;
 };
@@ -104,6 +124,7 @@ private:
     void removeHoldSlack(double slack);
     void addHoldSlack(double slack);
     void refreshWns();
+    std::vector<int> affectedPathIds(const TimingMove& move, bool setup_paths) const;
 
 public:
     TimingEngine(const std::string& r_name,
@@ -111,13 +132,32 @@ public:
                  const std::unordered_map<std::string, BufferCell>& lib,
                  const std::vector<DataPath>& ss_p,
                  const std::vector<DataPath>& ff_p,
-                 double period);
+                 double period,
+                 double hold_guard = 0.0);
 
     void updateTiming(const std::unordered_map<std::string, ClockNode>& new_tree);
     void evaluateMetrics(double& tns_ss, double& wns_ss, double& tns_ff, double& wns_ff, double& total_area) const;
 
     const TimingMetrics& metrics() const;
+    TimingMetrics computeCurrentMetrics() const;
+    static ScoreTerms computeScoreTerms(const TimingMetrics& metrics,
+                                        const TimingMetrics& original);
+
     IncrementalEvalResult evaluateMove(const TimingMove& move);
+    IncrementalEvalResult evaluateResizeMove(const std::string& node,
+                                             const std::string& new_type);
+    IncrementalEvalResult evaluateInsertChainMove(
+        const std::string& parent,
+        const std::string& child,
+        const std::vector<std::string>& chain_types);
+    IncrementalEvalResult evaluateSubtreeMove(const TimingMove& move);
+
+    std::vector<int> getAffectedSetupPaths(const TimingMove& move) const;
+    std::vector<int> getAffectedHoldPaths(const TimingMove& move) const;
+
+    bool applyMove(const TimingMove& move, TimingRollback& rollback);
+    bool rollbackMove(TimingRollback& rollback);
+    bool commitResizeMove(const std::string& node, const std::string& new_type);
 };
 
 #endif // TIMING_ENGINE_H

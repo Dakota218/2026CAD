@@ -2,10 +2,18 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-TC="testcase0"
+LOG_DIR="$ROOT/logs"
+CHECKER_LOG="$LOG_DIR/testcase0_checker.log"
 
+mkdir -p "$LOG_DIR"
 cd "$ROOT"
+
 make clean
 make
-./cadd0016 "./$TC" "./$TC/modified_clk_tree.structure"
-./checker "$ROOT/$TC/clk_tree.structure" "$ROOT/$TC/modified_clk_tree.structure" "$ROOT/$TC/buf.lib" "$ROOT/$TC/FF_delay.rpt" "$ROOT/$TC/SS_delay.rpt"
+./cadd0016 "$ROOT/testcase0" "$ROOT/testcase0/modified_clk_tree.structure"
+./checker "$ROOT/testcase0/clk_tree.structure" \
+  "$ROOT/testcase0/modified_clk_tree.structure" \
+  "$ROOT/testcase0/buf.lib" \
+  "$ROOT/testcase0/FF_delay.rpt" \
+  "$ROOT/testcase0/SS_delay.rpt" | tee "$CHECKER_LOG"
+python3 "$ROOT/analyze_score_terms.py" --label testcase0 "$CHECKER_LOG"

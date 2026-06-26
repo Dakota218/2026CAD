@@ -3,46 +3,223 @@
 Priority order: setup timing first, then hold timing, then area.
 
 ## Baseline
-- Existing optimizer status: it did not have fixed 0-2/2-6/6-8/8-9/9-9.5 minute phases; it used one mixed greedy loop.
-- New schedule: 0-2 WNS repair, 2-6 TNS/NVP cleanup, 6-8 group/ancestor insertion, 8-9 hold final repair, 9-9.5 area recovery, then output best_tree.
-- Baseline SS TNS/WNS/NVP: -98.697600/-0.302000/2157
-- Baseline FF TNS/WNS/NVP: -0.103400/-0.029800/5
-- Baseline area: 980.414032
+- Adaptive schedule selected from initial node/path/violation counts.
+- Baseline SS TNS/WNS/NVP: -1134.160100/-0.528600/18745
+- Baseline FF TNS/WNS/NVP: -2.988000/-0.106500/121
+- Baseline area: 6997.009120
+- Initial nodes/setup paths: 37883/79536
+- Score terms initial score terms: SS_TNS_term=0.000000 SS_WNS_term=0.000000 FF_TNS_term=0.000000 FF_WNS_term=0.000000 AREA_term=0.000000 setup_sum=0.0000 hold_sum=0.0000 weakest_term=0.0000 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=0.0000,0.0000,0.0000,0.0000,0.0000 average_robust=0.0000 min_robust=0.0000 robust_score=0.0000 timing_score=0.0000 weakest=SS_TNS_term
+- Phase timing_aggressive WNS: 0.000000-145.000000 sec, exact limit 4096
+- Phase timing_aggressive TNS: 145.000000-390.000000 sec, exact limit 1024
+- Phase timing_aggressive setup: 390.000000-475.000000 sec, exact limit 1024
+- Phase hold_repair: 475.000000-520.000000 sec, exact limit 1024
+- Phase balanced cleanup: 520.000000-550.000000 sec, exact limit 768
+- Phase area_recovery: 550.000000-570.000000 sec, exact limit 768
 
-## Phase: WNS repair
-- Time window: 0.000000-70.000000 sec
-- Iteration 0: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -98.397600/-0.259600/2157; FF TNS/WNS/NVP -0.075100/-0.029800/4; area 980.794240.
+## Phase: timing_aggressive WNS
+- Time window: 0.000000-145.000000 sec
+- Score terms before timing_aggressive WNS: SS_TNS_term=0.000000 SS_WNS_term=0.000000 FF_TNS_term=0.000000 FF_WNS_term=0.000000 AREA_term=0.000000 setup_sum=0.0000 hold_sum=0.0000 weakest_term=0.0000 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=0.0000,0.0000,0.0000,0.0000,0.0000 average_robust=0.0000 min_robust=0.0000 robust_score=0.0000 timing_score=0.0000 weakest=SS_TNS_term
+- Iteration 0: generated 18000 candidates; chains L2=9, L3=60, L4=208, L5=681, L6=1940, L7=4373, L8=10664; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_3->FF_9; old SS_TNS_term=0.000000 SS_WNS_term=0.000000 FF_TNS_term=0.000000 FF_WNS_term=0.000000 AREA_term=0.000000 setup_sum=0.0000 hold_sum=0.0000 weakest_term=0.0000 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=0.0000,0.0000,0.0000,0.0000,0.0000 average_robust=0.0000 min_robust=0.0000 robust_score=0.0000 timing_score=0.0000 weakest=SS_TNS_term; new SS_TNS_term=0.003303 SS_WNS_term=0.069996 FF_TNS_term=0.043942 FF_WNS_term=0.000000 AREA_term=-0.000145 setup_sum=0.0733 hold_sum=0.0439 weakest_term=-0.0001 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.2605 weakest=AREA_term; delta dSS_TNS=0.003303 dSS_WNS=0.069996 dFF_TNS=0.043942 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.260508; reason: phase-guiding weakest timing term improved.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 0: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1130.414000/-0.491600/18741; FF TNS/WNS/NVP -2.856700/-0.106500/118; area 6998.023008.
   - Updated best_tree.
-- Iteration 1: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -97.770100/-0.252800/2151; FF TNS/WNS/NVP -0.075100/-0.029800/4; area 981.174448.
+- Iteration 1: generated 18000 candidates; chains L2=10, L3=53, L4=196, L5=684, L6=1948, L7=4366, L8=10678; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_1->FF_5; old SS_TNS_term=0.003303 SS_WNS_term=0.069996 FF_TNS_term=0.043942 FF_WNS_term=0.000000 AREA_term=-0.000145 setup_sum=0.0733 hold_sum=0.0439 weakest_term=-0.0001 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.2605 weakest=AREA_term; new SS_TNS_term=0.006312 SS_WNS_term=0.103859 FF_TNS_term=0.056894 FF_WNS_term=0.000000 AREA_term=-0.000290 setup_sum=0.1102 hold_sum=0.0569 weakest_term=-0.0003 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.3810 weakest=AREA_term; delta dSS_TNS=0.003009 dSS_WNS=0.033863 dFF_TNS=0.012952 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.120530; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 1: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1127.001000/-0.473700/18734; FF TNS/WNS/NVP -2.818000/-0.106500/117; area 6999.036896.
   - Updated best_tree.
-- Iteration 2: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -97.525600/-0.231200/2150; FF TNS/WNS/NVP -0.075100/-0.029800/4; area 981.554656.
+- Iteration 2: generated 18000 candidates; chains L2=11, L3=52, L4=189, L5=689, L6=1967, L7=4361, L8=10666; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_9->FF_16; old SS_TNS_term=0.006312 SS_WNS_term=0.103859 FF_TNS_term=0.056894 FF_WNS_term=0.000000 AREA_term=-0.000290 setup_sum=0.1102 hold_sum=0.0569 weakest_term=-0.0003 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.3810 weakest=AREA_term; new SS_TNS_term=0.006647 SS_WNS_term=0.104616 FF_TNS_term=0.072992 FF_WNS_term=0.000000 AREA_term=-0.000463 setup_sum=0.1113 hold_sum=0.0730 weakest_term=-0.0005 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.4000 weakest=AREA_term; delta dSS_TNS=0.000335 dSS_WNS=0.000757 dFF_TNS=0.016098 dFF_WNS=0.000000 dAREA=-0.000173 dROBUST=-0.000000 dTIMING=0.019003; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 2: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1126.621000/-0.473300/18734; FF TNS/WNS/NVP -2.769900/-0.106500/114; area 7000.246584.
   - Updated best_tree.
-- Iteration 3: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -96.680200/-0.227300/2141; FF TNS/WNS/NVP -0.075100/-0.029800/4; area 981.934864.
+- Iteration 3: generated 18000 candidates; chains L2=11, L3=52, L4=190, L5=693, L6=1976, L7=4361, L8=10652; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_13->FF_19; old SS_TNS_term=0.006647 SS_WNS_term=0.104616 FF_TNS_term=0.072992 FF_WNS_term=0.000000 AREA_term=-0.000463 setup_sum=0.1113 hold_sum=0.0730 weakest_term=-0.0005 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.4000 weakest=AREA_term; new SS_TNS_term=0.009212 SS_WNS_term=0.131101 FF_TNS_term=0.072992 FF_WNS_term=0.000000 AREA_term=-0.000636 setup_sum=0.1403 hold_sum=0.0730 weakest_term=-0.0006 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.4846 weakest=AREA_term; delta dSS_TNS=0.002564 dSS_WNS=0.026485 dFF_TNS=0.000000 dFF_WNS=0.000000 dAREA=-0.000173 dROBUST=-0.000000 dTIMING=0.084549; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 3: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1123.712500/-0.459300/18726; FF TNS/WNS/NVP -2.769900/-0.106500/114; area 7001.456272.
   - Updated best_tree.
-- Iteration 4: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -96.530200/-0.224400/2141; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 982.315072.
+- Iteration 4: generated 18000 candidates; chains L2=9, L3=47, L4=183, L5=708, L6=1971, L7=4358, L8=10660; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_0->FF_0; old SS_TNS_term=0.009212 SS_WNS_term=0.131101 FF_TNS_term=0.072992 FF_WNS_term=0.000000 AREA_term=-0.000636 setup_sum=0.1403 hold_sum=0.0730 weakest_term=-0.0006 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.4846 weakest=AREA_term; new SS_TNS_term=0.009630 SS_WNS_term=0.143776 FF_TNS_term=0.087684 FF_WNS_term=0.000000 AREA_term=-0.000780 setup_sum=0.1534 hold_sum=0.0877 weakest_term=-0.0008 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.5381 weakest=AREA_term; delta dSS_TNS=0.000418 dSS_WNS=0.012675 dFF_TNS=0.014692 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.053525; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 4: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1123.238000/-0.452600/18725; FF TNS/WNS/NVP -2.726000/-0.106500/113; area 7002.470160.
   - Updated best_tree.
-- Iteration 5: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -95.570600/-0.219600/2134; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 982.695280.
+- Iteration 5: generated 18000 candidates; chains L2=9, L3=47, L4=183, L5=711, L6=1975, L7=4362, L8=10649; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_6->FF_13; old SS_TNS_term=0.009630 SS_WNS_term=0.143776 FF_TNS_term=0.087684 FF_WNS_term=0.000000 AREA_term=-0.000780 setup_sum=0.1534 hold_sum=0.0877 weakest_term=-0.0008 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.5381 weakest=AREA_term; new SS_TNS_term=0.012105 SS_WNS_term=0.202421 FF_TNS_term=0.087684 FF_WNS_term=0.000000 AREA_term=-0.000925 setup_sum=0.2145 hold_sum=0.0877 weakest_term=-0.0009 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.7190 weakest=AREA_term; delta dSS_TNS=0.002475 dSS_WNS=0.058645 dFF_TNS=0.000000 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.180857; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 5: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1120.431100/-0.421600/18717; FF TNS/WNS/NVP -2.726000/-0.106500/113; area 7003.484048.
   - Updated best_tree.
-- Iteration 6: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -95.420600/-0.216900/2134; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 983.075488.
+- Iteration 6: generated 18000 candidates; chains L2=8, L3=47, L4=178, L5=730, L6=1981, L7=4360, L8=10632; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_2->FF_6; old SS_TNS_term=0.012105 SS_WNS_term=0.202421 FF_TNS_term=0.087684 FF_WNS_term=0.000000 AREA_term=-0.000925 setup_sum=0.2145 hold_sum=0.0877 weakest_term=-0.0009 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.7190 weakest=AREA_term; new SS_TNS_term=0.012807 SS_WNS_term=0.204881 FF_TNS_term=0.129050 FF_WNS_term=0.000000 AREA_term=-0.001070 setup_sum=0.2177 hold_sum=0.1290 weakest_term=-0.0011 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.7691 weakest=AREA_term; delta dSS_TNS=0.000702 dSS_WNS=0.002459 dFF_TNS=0.041365 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.050119; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 6: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1119.634500/-0.420300/18716; FF TNS/WNS/NVP -2.602400/-0.106500/110; area 7004.497936.
   - Updated best_tree.
-- Iteration 7: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -94.889300/-0.215600/2130; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 983.455696.
+- Iteration 7: generated 18000 candidates; chains L2=8, L3=44, L4=180, L5=736, L6=1984, L7=4364, L8=10620; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_2->FF_7; old SS_TNS_term=0.012807 SS_WNS_term=0.204881 FF_TNS_term=0.129050 FF_WNS_term=0.000000 AREA_term=-0.001070 setup_sum=0.2177 hold_sum=0.1290 weakest_term=-0.0011 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.7691 weakest=AREA_term; new SS_TNS_term=0.013472 SS_WNS_term=0.215853 FF_TNS_term=0.180656 FF_WNS_term=0.000000 AREA_term=-0.001215 setup_sum=0.2293 hold_sum=0.1807 weakest_term=-0.0012 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.8549 weakest=AREA_term; delta dSS_TNS=0.000665 dSS_WNS=0.010972 dFF_TNS=0.051606 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.085824; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 7: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1118.880700/-0.414500/18715; FF TNS/WNS/NVP -2.448200/-0.106500/107; area 7005.511824.
   - Updated best_tree.
-- Iteration 8: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -94.024000/-0.207000/2124; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 983.835904.
+- Iteration 8: generated 18000 candidates; chains L2=8, L3=44, L4=177, L5=741, L6=1988, L7=4365, L8=10613; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_9->FF_15; old SS_TNS_term=0.013472 SS_WNS_term=0.215853 FF_TNS_term=0.180656 FF_WNS_term=0.000000 AREA_term=-0.001215 setup_sum=0.2293 hold_sum=0.1807 weakest_term=-0.0012 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.8549 weakest=AREA_term; new SS_TNS_term=0.013854 SS_WNS_term=0.223420 FF_TNS_term=0.183467 FF_WNS_term=0.000000 AREA_term=-0.001360 setup_sum=0.2373 hold_sum=0.1835 weakest_term=-0.0014 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.8812 weakest=AREA_term; delta dSS_TNS=0.000382 dSS_WNS=0.007567 dFF_TNS=0.002811 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.026247; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 8: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1118.447600/-0.410500/18714; FF TNS/WNS/NVP -2.439800/-0.106500/106; area 7006.525712.
   - Updated best_tree.
-- Iteration 9: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -93.234700/-0.206200/2119; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 984.216112.
+- Iteration 9: generated 18000 candidates; chains L2=8, L3=44, L4=177, L5=743, L6=1992, L7=4373, L8=10599; resize speed/delay/area 64/0/0.
+- Accepted move resize node=BUF_51 type=REALBUF_X16; old SS_TNS_term=0.013854 SS_WNS_term=0.223420 FF_TNS_term=0.183467 FF_WNS_term=0.000000 AREA_term=-0.001360 setup_sum=0.2373 hold_sum=0.1835 weakest_term=-0.0014 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=0.8812 weakest=AREA_term; new SS_TNS_term=0.052377 SS_WNS_term=0.236663 FF_TNS_term=0.245716 FF_WNS_term=0.000000 AREA_term=-0.001528 setup_sum=0.2890 hold_sum=0.2457 weakest_term=-0.0015 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.0602 weakest=AREA_term; delta dSS_TNS=0.038523 dSS_WNS=0.013243 dFF_TNS=0.062249 dFF_WNS=0.000000 dAREA=-0.000168 dROBUST=-0.000001 dTIMING=0.178990; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 9: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1074.756000/-0.403500/18352; FF TNS/WNS/NVP -2.253800/-0.106500/100; area 7007.700512.
   - Updated best_tree.
-- Iteration 10: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -92.824000/-0.202400/2114; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 984.469584.
+- Iteration 10: generated 18000 candidates; chains L1=2, L2=8, L3=83, L4=215, L5=840, L6=2039, L7=4345, L8=10403; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_94->FF_105; old SS_TNS_term=0.052377 SS_WNS_term=0.236663 FF_TNS_term=0.245716 FF_WNS_term=0.000000 AREA_term=-0.001528 setup_sum=0.2890 hold_sum=0.2457 weakest_term=-0.0015 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.0602 weakest=AREA_term; new SS_TNS_term=0.054685 SS_WNS_term=0.249338 FF_TNS_term=0.245716 FF_WNS_term=0.000000 AREA_term=-0.001757 setup_sum=0.3040 hold_sum=0.2457 weakest_term=-0.0018 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1027 weakest=AREA_term; delta dSS_TNS=0.002308 dSS_WNS=0.012675 dFF_TNS=0.000000 dFF_WNS=0.000000 dAREA=-0.000229 dROBUST=-0.000000 dTIMING=0.042596; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 10: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1072.138000/-0.396800/18344; FF TNS/WNS/NVP -2.253800/-0.106500/100; area 7009.301800.
   - Updated best_tree.
-- Iteration 11: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -92.674000/-0.202000/2114; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 984.849792.
+- Iteration 11: generated 18000 candidates; chains L1=2, L2=8, L3=76, L4=207, L5=840, L6=2040, L7=4367, L8=10395; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_26->FF_36; old SS_TNS_term=0.054685 SS_WNS_term=0.249338 FF_TNS_term=0.245716 FF_WNS_term=0.000000 AREA_term=-0.001757 setup_sum=0.3040 hold_sum=0.2457 weakest_term=-0.0018 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1027 weakest=AREA_term; new SS_TNS_term=0.055812 SS_WNS_term=0.262959 FF_TNS_term=0.248327 FF_WNS_term=0.000000 AREA_term=-0.001902 setup_sum=0.3188 hold_sum=0.2483 weakest_term=-0.0019 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1484 weakest=AREA_term; delta dSS_TNS=0.001126 dSS_WNS=0.013621 dFF_TNS=0.002610 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000000 dTIMING=0.045696; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 11: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1070.860900/-0.389600/18340; FF TNS/WNS/NVP -2.246000/-0.106500/99; area 7010.315688.
   - Updated best_tree.
-- Iteration 12: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -92.040400/-0.201400/2108; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 985.230000.
+- Iteration 12: generated 18000 candidates; chains L1=2, L2=8, L3=77, L4=206, L5=838, L6=2041, L7=4374, L8=10389; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_75->FF_84; old SS_TNS_term=0.055812 SS_WNS_term=0.262959 FF_TNS_term=0.248327 FF_WNS_term=0.000000 AREA_term=-0.001902 setup_sum=0.3188 hold_sum=0.2483 weakest_term=-0.0019 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1484 weakest=AREA_term; new SS_TNS_term=0.057844 SS_WNS_term=0.265796 FF_TNS_term=0.254485 FF_WNS_term=0.000000 AREA_term=-0.002075 setup_sum=0.3236 hold_sum=0.2545 weakest_term=-0.0021 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1671 weakest=AREA_term; delta dSS_TNS=0.002033 dSS_WNS=0.002838 dFF_TNS=0.006158 dFF_WNS=0.000000 dAREA=-0.000173 dROBUST=-0.000000 dTIMING=0.018702; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 12: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1068.555200/-0.388100/18331; FF TNS/WNS/NVP -2.227600/-0.106500/98; area 7011.525376.
   - Updated best_tree.
-- Iteration 13: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -91.649900/-0.201400/2102; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 986.001808.
+- Iteration 13: generated 18000 candidates; chains L1=2, L2=9, L3=76, L4=206, L5=842, L6=2049, L7=4390, L8=10361; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_1->FF_2; old SS_TNS_term=0.057844 SS_WNS_term=0.265796 FF_TNS_term=0.254485 FF_WNS_term=0.000000 AREA_term=-0.002075 setup_sum=0.3236 hold_sum=0.2545 weakest_term=-0.0021 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.1671 weakest=AREA_term; new SS_TNS_term=0.058556 SS_WNS_term=0.272607 FF_TNS_term=0.282965 FF_WNS_term=0.000000 AREA_term=-0.002220 setup_sum=0.3312 hold_sum=0.2830 weakest_term=-0.0022 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2175 weakest=AREA_term; delta dSS_TNS=0.000712 dSS_WNS=0.006810 dFF_TNS=0.028481 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000001 dTIMING=0.050306; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 13: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1067.748000/-0.384500/18327; FF TNS/WNS/NVP -2.142500/-0.106500/95; area 7012.539264.
   - Updated best_tree.
-- Iteration 14: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -90.823000/-0.201000/2095; FF TNS/WNS/NVP -0.045300/-0.020400/3; area 986.382016.
+- Iteration 14: generated 18000 candidates; chains L1=2, L2=9, L3=77, L4=209, L5=844, L6=2054, L7=4389, L8=10351; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_13->FF_21; old SS_TNS_term=0.058556 SS_WNS_term=0.272607 FF_TNS_term=0.282965 FF_WNS_term=0.000000 AREA_term=-0.002220 setup_sum=0.3312 hold_sum=0.2830 weakest_term=-0.0022 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2175 weakest=AREA_term; new SS_TNS_term=0.060270 SS_WNS_term=0.283201 FF_TNS_term=0.283969 FF_WNS_term=0.000000 AREA_term=-0.002392 setup_sum=0.3435 hold_sum=0.2840 weakest_term=-0.0024 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2536 weakest=AREA_term; delta dSS_TNS=0.001713 dSS_WNS=0.010594 dFF_TNS=0.001004 dFF_WNS=0.000000 dAREA=-0.000173 dROBUST=-0.000000 dTIMING=0.036178; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 14: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1065.804800/-0.378900/18318; FF TNS/WNS/NVP -2.139500/-0.106500/94; area 7013.748952.
   - Updated best_tree.
-- Iteration 15: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -90.564500/-0.198300/2094; FF TNS/WNS/NVP -0.036800/-0.020400/2; area 986.762224.
+- Iteration 15: generated 18000 candidates; chains L1=2, L2=9, L3=75, L4=212, L5=848, L6=2056, L7=4390, L8=10343; resize speed/delay/area 64/1/1.
+- Accepted move insert-leaf edge=BUF_5->FF_12; old SS_TNS_term=0.060270 SS_WNS_term=0.283201 FF_TNS_term=0.283969 FF_WNS_term=0.000000 AREA_term=-0.002392 setup_sum=0.3435 hold_sum=0.2840 weakest_term=-0.0024 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2536 weakest=AREA_term; new SS_TNS_term=0.060783 SS_WNS_term=0.285471 FF_TNS_term=0.291600 FF_WNS_term=0.000000 AREA_term=-0.002565 setup_sum=0.3463 hold_sum=0.2916 weakest_term=-0.0026 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2691 weakest=AREA_term; delta dSS_TNS=0.000514 dSS_WNS=0.002270 dFF_TNS=0.007631 dFF_WNS=0.000000 dAREA=-0.000173 dROBUST=-0.000000 dTIMING=0.015434; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 15: accepted WNS repair sequence; evaluated 4096; sequence length 1; SS TNS/WNS/NVP -1065.222100/-0.377700/18316; FF TNS/WNS/NVP -2.116700/-0.106500/93; area 7014.958640.
   - Updated best_tree.
-- Iteration 16: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -89.918100/-0.195000/2087; FF TNS/WNS/NVP -0.036800/-0.020400/2; area 987.142432.
+- Iteration 16: generated 18000 candidates; chains L1=2, L2=8, L3=73, L4=211, L5=849, L6=2060, L7=4386, L8=10347; resize speed/delay/area 64/0/0.
+- Accepted move insert-leaf edge=BUF_26->FF_35; old SS_TNS_term=0.060783 SS_WNS_term=0.285471 FF_TNS_term=0.291600 FF_WNS_term=0.000000 AREA_term=-0.002565 setup_sum=0.3463 hold_sum=0.2916 weakest_term=-0.0026 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.2691 weakest=AREA_term; new SS_TNS_term=0.061356 SS_WNS_term=0.292092 FF_TNS_term=0.310676 FF_WNS_term=0.000000 AREA_term=-0.002710 setup_sum=0.3534 hold_sum=0.3107 weakest_term=-0.0027 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3091 weakest=AREA_term; delta dSS_TNS=0.000572 dSS_WNS=0.006621 dFF_TNS=0.019076 dFF_WNS=0.000000 dAREA=-0.000145 dROBUST=-0.000001 dTIMING=0.040056; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 16: accepted WNS repair sequence; evaluated 1226; sequence length 1; SS TNS/WNS/NVP -1064.573000/-0.374200/18314; FF TNS/WNS/NVP -2.059700/-0.106500/91; area 7015.972528.
   - Updated best_tree.
-- Iteration 17: accepted WNS repair sequence; evaluated 384; sequence length 1; SS TNS/WNS/NVP -88.788100/-0.192000/2081; FF TNS/WNS/NVP -0.036800/-0
+- Score terms after timing_aggressive WNS: SS_TNS_term=0.061356 SS_WNS_term=0.292092 FF_TNS_term=0.310676 FF_WNS_term=0.000000 AREA_term=-0.002710 setup_sum=0.3534 hold_sum=0.3107 weakest_term=-0.0027 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3091 weakest=AREA_term
+
+## Phase: timing_aggressive TNS
+- Time window: 145.000000-390.000000 sec
+- Score terms before timing_aggressive TNS: SS_TNS_term=0.061356 SS_WNS_term=0.292092 FF_TNS_term=0.310676 FF_WNS_term=0.000000 AREA_term=-0.002710 setup_sum=0.3534 hold_sum=0.3107 weakest_term=-0.0027 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3091 weakest=AREA_term
+- Iteration 0: generated 18000 candidates; chains L1=6, L2=57, L3=237, L4=664, L5=1211, L6=2019, L7=3808, L8=9806; resize speed/delay/area 192/0/0.
+- Accepted move resize node=BUF_164 type=REALBUF_X16; old SS_TNS_term=0.061356 SS_WNS_term=0.292092 FF_TNS_term=0.310676 FF_WNS_term=0.000000 AREA_term=-0.002710 setup_sum=0.3534 hold_sum=0.3107 weakest_term=-0.0027 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3091 weakest=AREA_term; new SS_TNS_term=0.074352 SS_WNS_term=0.292092 FF_TNS_term=0.329384 FF_WNS_term=0.000000 AREA_term=-0.002878 setup_sum=0.3664 hold_sum=0.3294 weakest_term=-0.0029 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3538 weakest=AREA_term; delta dSS_TNS=0.012997 dSS_WNS=0.000000 dFF_TNS=0.018708 dFF_WNS=0.000000 dAREA=-0.000168 dROBUST=-0.000001 dTIMING=0.044668; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 0: accepted TNS/NVP cleanup sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -1049.832700/-0.374200/18210; FF TNS/WNS/NVP -2.003800/-0.106500/88; area 7017.147328.
+  - Updated best_tree.
+- Iteration 1: generated 18000 candidates; chains L1=6, L2=63, L3=254, L4=683, L5=1248, L6=2023, L7=3792, L8=9739; resize speed/delay/area 192/0/0.
+- Accepted move resize node=BUF_151 type=REALBUF_X16; old SS_TNS_term=0.074352 SS_WNS_term=0.292092 FF_TNS_term=0.329384 FF_WNS_term=0.000000 AREA_term=-0.002878 setup_sum=0.3664 hold_sum=0.3294 weakest_term=-0.0029 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3538 weakest=AREA_term; new SS_TNS_term=0.083321 SS_WNS_term=0.292092 FF_TNS_term=0.346921 FF_WNS_term=0.000000 AREA_term=-0.003046 setup_sum=0.3754 hold_sum=0.3469 weakest_term=-0.0030 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3892 weakest=AREA_term; delta dSS_TNS=0.008969 dSS_WNS=0.000000 dFF_TNS=0.017537 dFF_WNS=0.000000 dAREA=-0.000168 dROBUST=-0.000001 dTIMING=0.035441; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 1: accepted TNS/NVP cleanup sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -1039.660500/-0.374200/18108; FF TNS/WNS/NVP -1.951400/-0.106500/86; area 7018.322128.
+  - Updated best_tree.
+- Iteration 2: generated 18000 candidates; chains L1=6, L2=67, L3=259, L4=691, L5=1251, L6=2042, L7=3806, L8=9686; resize speed/delay/area 192/0/0.
+- Accepted move resize node=BUF_372 type=REALBUF_X16; old SS_TNS_term=0.083321 SS_WNS_term=0.292092 FF_TNS_term=0.346921 FF_WNS_term=0.000000 AREA_term=-0.003046 setup_sum=0.3754 hold_sum=0.3469 weakest_term=-0.0030 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.3892 weakest=AREA_term; new SS_TNS_term=0.089473 SS_WNS_term=0.292092 FF_TNS_term=0.353012 FF_WNS_term=0.000000 AREA_term=-0.003214 setup_sum=0.3816 hold_sum=0.3530 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4076 weakest=AREA_term; delta dSS_TNS=0.006152 dSS_WNS=0.000000 dFF_TNS=0.006091 dFF_WNS=0.000000 dAREA=-0.000168 dROBUST=-0.000001 dTIMING=0.018361; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 2: accepted TNS/NVP cleanup sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -1032.683400/-0.374200/18045; FF TNS/WNS/NVP -1.933200/-0.106500/84; area 7019.496928.
+  - Updated best_tree.
+- Iteration 3: generated 18000 candidates; chains L1=11, L2=69, L3=260, L4=692, L5=1260, L6=2042, L7=3804, L8=9670; resize speed/delay/area 192/0/0.
+- Iteration 3: evaluated 0, no acceptable candidate.
+- Score terms after timing_aggressive TNS: SS_TNS_term=0.089473 SS_WNS_term=0.292092 FF_TNS_term=0.353012 FF_WNS_term=0.000000 AREA_term=-0.003214 setup_sum=0.3816 hold_sum=0.3530 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4076 weakest=AREA_term
+
+## Phase: timing_aggressive setup
+- Time window: 390.000000-475.000000 sec
+- Score terms before timing_aggressive setup: SS_TNS_term=0.089473 SS_WNS_term=0.292092 FF_TNS_term=0.353012 FF_WNS_term=0.000000 AREA_term=-0.003214 setup_sum=0.3816 hold_sum=0.3530 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4076 weakest=AREA_term
+- Iteration 0: generated 18000 candidates; chains L1=1, L2=37, L3=146, L4=488, L5=1101, L6=1883, L7=3774, L8=10378; resize speed/delay/area 192/0/0.
+- Accepted move resize node=BUF_362 type=REALBUF_X16; old SS_TNS_term=0.089473 SS_WNS_term=0.292092 FF_TNS_term=0.353012 FF_WNS_term=0.000000 AREA_term=-0.003214 setup_sum=0.3816 hold_sum=0.3530 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4076 weakest=AREA_term; new SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term; delta dSS_TNS=0.010388 dSS_WNS=0.000000 dFF_TNS=0.018775 dFF_WNS=0.000000 dAREA=-0.000168 dROBUST=-0.000001 dTIMING=0.039518; reason: timing score improved with protected terms.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 0: accepted aggressive setup sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -1020.901700/-0.374200/17933; FF TNS/WNS/NVP -1.877100/-0.106500/84; area 7020.671728.
+  - Updated best_tree.
+- Iteration 1: generated 18000 candidates; chains L1=1, L2=42, L3=153, L4=494, L5=1102, L6=1901, L7=3785, L8=10330; resize speed/delay/area 192/0/0.
+- Iteration 1: evaluated 0, no acceptable candidate.
+- Score terms after timing_aggressive setup: SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+
+## Phase: hold_repair
+- Time window: 475.000000-520.000000 sec
+- Score terms before hold_repair: SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+- Score terms after hold_repair: SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+
+## Phase: balanced cleanup
+- Time window: 520.000000-550.000000 sec
+- Score terms before balanced cleanup: SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+- Iteration 0: generated 18000 candidates; chains L1=14, L2=86, L3=351, L4=895, L5=1538, L6=2303, L7=3827, L8=8858; resize speed/delay/area 128/0/0.
+- Iteration 0: evaluated 0, no acceptable candidate.
+- Score terms after balanced cleanup: SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+
+```
+========== Mode Comparison: current testcase ==========
+mode                    SS_TNS    SS_WNS    FF_TNS    FF_WNS      AREA    robust_score    timing_score
+timing_aggressive       0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+hold_repair             0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+balanced                0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+area_recovery           0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+selected_best           0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+=====================================
+```
+- Score terms final selected solution (timing_aggressive): SS_TNS_term=0.099861 SS_WNS_term=0.292092 FF_TNS_term=0.371787 FF_WNS_term=0.000000 AREA_term=-0.003382 setup_sum=0.3920 hold_sum=0.3718 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.4471 weakest=AREA_term
+
+## Final
+- Final best robust score: -0.000008
+- Final SS TNS/WNS/NVP: -1020.901700/-0.374200/17933
+- Final FF TNS/WNS/NVP: -1.877100/-0.106500/84
+- Final area: 7020.671728
+- Applied moves: 21; inserted buffers: 128; resize moves: 5
+- Aggressive setup worsened hold temporarily: no; hold repair recovered: no.
+0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=1.9687 weakest=AREA_term; new SS_TNS_term=0.143695 SS_WNS_term=0.292092 FF_TNS_term=0.529685 FF_WNS_term=0.329577 AREA_term=-0.003257 setup_sum=0.4358 hold_sum=0.8593 weakest_term=-0.0033 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.1871 weakest=AREA_term; delta dSS_TNS=0.015265 dSS_WNS=0.000000 dFF_TNS=0.024398 dFF_WNS=0.108920 dAREA=0.000112 dROBUST=-0.000003 dTIMING=0.218330; reason: weakest normalized term improved.
+  - Progress mode: improving the weakest term.
+- Iteration 2: accepted hold final repair sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -971.187100/-0.374200/17590; FF TNS/WNS/NVP -1.405300/-0.071400/65; area 7019.796680.
+  - Updated best_tree.
+- Iteration 3: generated 3497 candidates; chains L2=7, L3=24, L4=48, L5=62, L6=78, L7=178, L8=1877; resize speed/delay/area 1017/206/212.
+- Accepted move insert-leaf edge=BUF_1->FF_4; old SS_TNS_term=0.143695 SS_WNS_term=0.292092 FF_TNS_term=0.529685 FF_WNS_term=0.329577 AREA_term=-0.003257 setup_sum=0.4358 hold_sum=0.8593 weakest_term=-0.0033 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.1871 weakest=AREA_term; new SS_TNS_term=0.143755 SS_WNS_term=0.292092 FF_TNS_term=0.573695 FF_WNS_term=0.344601 AREA_term=-0.003384 setup_sum=0.4358 hold_sum=0.9183 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.2537 weakest=AREA_term; delta dSS_TNS=0.000060 dSS_WNS=0.000000 dFF_TNS=0.044009 dFF_WNS=0.015023 dAREA=-0.000127 dROBUST=-0.000002 dTIMING=0.066639; reason: phase-guiding weakest timing term improved.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 3: accepted hold final repair sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -971.119300/-0.374200/17589; FF TNS/WNS/NVP -1.273800/-0.069800/62; area 7020.683832.
+  - Updated best_tree.
+- Iteration 4: generated 3352 candidates; chains L2=7, L3=24, L4=48, L5=61, L6=75, L7=167, L8=1794; resize speed/delay/area 970/206/211.
+- Accepted move resize node=BUF_13 type=REALBUF_X2; old SS_TNS_term=0.143755 SS_WNS_term=0.292092 FF_TNS_term=0.573695 FF_WNS_term=0.344601 AREA_term=-0.003384 setup_sum=0.4358 hold_sum=0.9183 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.2537 weakest=AREA_term; new SS_TNS_term=0.156436 SS_WNS_term=0.292092 FF_TNS_term=0.593541 FF_WNS_term=0.372770 AREA_term=-0.003300 setup_sum=0.4485 hold_sum=0.9663 weakest_term=-0.0033 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.3412 weakest=AREA_term; delta dSS_TNS=0.012681 dSS_WNS=0.000000 dFF_TNS=0.019846 dFF_WNS=0.028169 dAREA=0.000084 dROBUST=-0.000001 dTIMING=0.087479; reason: weakest normalized term improved.
+  - Progress mode: improving the weakest term.
+- Iteration 4: accepted hold final repair sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -956.736900/-0.374200/17436; FF TNS/WNS/NVP -1.214500/-0.066800/60; area 7020.096432.
+  - Updated best_tree.
+- Iteration 5: generated 3279 candidates; chains L2=7, L3=23, L4=41, L5=56, L6=75, L7=168, L8=1764; resize speed/delay/area 952/193/198.
+- Accepted move resize node=BUF_10 type=REALBUF_X2; old SS_TNS_term=0.156436 SS_WNS_term=0.292092 FF_TNS_term=0.593541 FF_WNS_term=0.372770 AREA_term=-0.003300 setup_sum=0.4485 hold_sum=0.9663 weakest_term=-0.0033 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.3412 weakest=AREA_term; new SS_TNS_term=0.159741 SS_WNS_term=0.292092 FF_TNS_term=0.608199 FF_WNS_term=0.416901 AREA_term=-0.003216 setup_sum=0.4518 hold_sum=1.0251 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.4287 weakest=AREA_term; delta dSS_TNS=0.003305 dSS_WNS=0.000000 dFF_TNS=0.014659 dFF_WNS=0.044131 dAREA=0.000084 dROBUST=-0.000001 dTIMING=0.087483; reason: weakest normalized term improved.
+  - Progress mode: improving the weakest term.
+- Iteration 5: accepted hold final repair sequence; evaluated 1024; sequence length 1; SS TNS/WNS/NVP -952.988500/-0.374200/17436; FF TNS/WNS/NVP -1.170700/-0.062100/60; area 7019.509032.
+  - Updated best_tree.
+- Iteration 6: generated 3244 candidates; chains L1=1, L2=6, L3=27, L4=43, L5=59, L6=75, L7=164, L8=1733; resize speed/delay/area 949/187/192.
+- Accepted move insert-internal edge=BUF_15->FF_23; old SS_TNS_term=0.159741 SS_WNS_term=0.292092 FF_TNS_term=0.608199 FF_WNS_term=0.416901 AREA_term=-0.003216 setup_sum=0.4518 hold_sum=1.0251 weakest_term=-0.0032 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0000,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0000 robust_score=-0.0000 timing_score=2.4287 weakest=AREA_term; new SS_TNS_term=0.160026 SS_WNS_term=0.292092 FF_TNS_term=0.628983 FF_WNS_term=0.454460 AREA_term=-0.003361 setup_sum=0.4521 hold_sum=1.0834 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0001,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0001 robust_score=-0.0000 timing_score=2.5063 weakest=AREA_term; delta dSS_TNS=0.000286 dSS_WNS=0.000000 dFF_TNS=0.020783 dFF_WNS=0.037559 dAREA=-0.000145 dROBUST=-0.000003 dTIMING=0.077663; reason: phase-guiding weakest timing term improved.
+  - Progress mode: improving timing-first normalized score.
+- Iteration 6: accepted hold final repair sequence; evaluated 241; sequence length 1; SS TNS/WNS/NVP -952.664600/-0.374200/17434; FF TNS/WNS/NVP -1.108600/-0.058100/59; area 7020.522920.
+  - Updated best_tree.
+- Score terms after hold_repair: SS_TNS_term=0.160026 SS_WNS_term=0.292092 FF_TNS_term=0.628983 FF_WNS_term=0.454460 AREA_term=-0.003361 setup_sum=0.4521 hold_sum=1.0834 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0001,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0001 robust_score=-0.0000 timing_score=2.5063 weakest=AREA_term
+
+## Phase: balanced cleanup
+- Time window: 520.000000-550.000000 sec
+- Score terms before balanced cleanup: SS_TNS_term=0.160026 SS_WNS_term=0.292092 FF_TNS_term=0.628983 FF_WNS_term=0.454460 AREA_term=-0.003361 setup_sum=0.4521 hold_sum=1.0834 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0001,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0001 robust_score=-0.0000 timing_score=2.5063 weakest=AREA_term
+- Iteration 0: generated 18000 candidates; chains L1=25, L2=154, L3=444, L4=981, L5=1608, L6=2341, L7=3834, L8=8485; resize speed/delay/area 128/0/0.
+- Iteration 0: evaluated 0, no acceptable candidate.
+- Score terms after balanced cleanup: SS_TNS_term=0.160026 SS_WNS_term=0.292092 FF_TNS_term=0.628983 FF_WNS_term=0.454460 AREA_term=-0.003361 setup_sum=0.4521 hold_sum=1.0834 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0001,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0001 robust_score=-0.0000 timing_score=2.5063 weakest=AREA_term
+
+```
+========== Mode Comparison: current testcase ==========
+mode                    SS_TNS    SS_WNS    FF_TNS    FF_WNS      AREA    robust_score    timing_score
+timing_aggressive       0.0999    0.2921    0.3718    0.0000   -0.0034         -0.0000          1.4471
+hold_repair             0.1600    0.2921    0.6290    0.4545   -0.0034         -0.0000          2.5063
+balanced                0.1600    0.2921    0.6290    0.4545   -0.0034         -0.0000          2.5063
+area_recovery           0.1600    0.2921    0.6290    0.4545   -0.0034         -0.0000          2.5063
+selected_best           0.1600    0.2921    0.6290    0.4545   -0.0034         -0.0000          2.5063
+=====================================
+```
+- Score terms final selected solution (hold_repair): SS_TNS_term=0.160026 SS_WNS_term=0.292092 FF_TNS_term=0.628983 FF_WNS_term=0.454460 AREA_term=-0.003361 setup_sum=0.4521 hold_sum=1.0834 weakest_term=-0.0034 bottleneck=setup repair robust[0.50,0.60,0.70,0.80,0.90]=-0.0001,-0.0000,-0.0000,-0.0000,-0.0000 average_robust=-0.0000 min_robust=-0.0001 robust_score=-0.0000 timing_score=2.5063 weakest=AREA_term
+
+## Final
+- Final best robust score: -0.000027
+- Final SS TNS/WNS/NVP: -952.664600/-0.374200/17434
+- Final FF TNS/WNS/NVP: -1.108600/-0.058100/59
+- Final area: 7020.522920
+- Applied moves: 28; inserted buffers: 150; resize moves: 9
+- Aggressive setup worsened hold temporarily: no; hold repair recovered: no.

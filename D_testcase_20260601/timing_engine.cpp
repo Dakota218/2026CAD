@@ -8,7 +8,8 @@ TimingEngine::TimingEngine(const std::string& r_name,
                            const std::unordered_map<std::string, BufferCell>& lib,
                            const std::vector<DataPath>& ss_p,
                            const std::vector<DataPath>& ff_p,
-                           double period)
+                           double period,
+                           double hold_guard)
     : root_name(r_name),
       clock_tree(tree),
       buf_lib(lib),
@@ -16,7 +17,7 @@ TimingEngine::TimingEngine(const std::string& r_name,
       ff_paths(ff_p),
       clock_period(period),
       setup_time(0.08 * period),
-      hold_time(0.05 * period) {
+      hold_time(0.05 * period + hold_guard) {
     rebuild();
 }
 
@@ -27,6 +28,35 @@ void TimingEngine::updateTiming(const std::unordered_map<std::string, ClockNode>
 
 const TimingMetrics& TimingEngine::metrics() const {
     return current_metrics;
+}
+
+TimingMetrics TimingEngine::computeCurrentMetrics() const {
+    return current_metrics;
+}
+
+ScoreTerms TimingEngine::computeScoreTerms(const TimingMetrics& metrics,
+                                           const TimingMetrics& original) {
+    const auto term = [](double current, double baseline) {
+        return baseline < -1e-12 ? 1.0 - current / baseline : 0.0;
+    };
+    ScoreTerms score;
+    score.ss_tns = term(metrics.tns_ss, original.tns_ss);
+    score.ss_wns = term(metrics.wns_ss, original.wns_ss);
+    score.ff_tns = term(metrics.tns_ff, original.tns_ff);
+    score.ff_wns = term(metrics.wns_ff, original.wns_ff);
+    score.area = original.area > 1e-12 ? 1.0 - metrics.area / original.area : 0.0;
+    score.timing_score = 4.0 * score.ss_wns + 3.0 * score.ss_tns +
+                         2.0 * score.ff_wns + 1.5 * score.ff_tns +
+                         0.5 * score.area;
+    const double alphas[] = {0.50, 0.60, 0.70, 0.80, 0.90};
+    for (double alpha : alphas) {
+        const double beta = (1.0 - alpha) / 2.0;
+        score.robust_score += alpha * (score.ss_tns + score.ss_wns) +
+                              beta * (score.ff_tns + score.ff_wns) +
+                              beta * score.area;
+    }
+    score.robust_score /= 5.0;
+    return score;
 }
 
 void TimingEngine::evaluateMetrics(double& tns_ss,
@@ -322,6 +352,193 @@ bool TimingEngine::moveDelta(const TimingMove& move,
     return false;
 }
 
+std::vector<int> TimingEngine::affectedPathIds(const TimingMove& move,
+                                               bool setup_paths) const {
+    std::vector<int> affected_sinks;
+    double delta_ss = 0.0, delta_ff = 0.0, delta_area = 0.0;
+    if (!moveDelta(move, affected_sinks, delta_ss, delta_ff, delta_area)) return {};
+
+    std::unordered_set<int> unique;
+    for (int sink : affected_sinks) {
+        const std::vector<int>& launch = setup_paths ? setup_launch_paths[sink]
+                                                     : hold_launch_paths[sink];
+        const std::vector<int>& capture = setup_paths ? setup_capture_paths[sink]
+                                                      : hold_capture_paths[sink];
+        unique.insert(launch.begin(), launch.end());
+        unique.insert(capture.begin(), capture.end());
+    }
+    std::vector<int> result(unique.begin(), unique.end());
+    std::sort(result.begin(), result.end());
+    return result;
+}
+
+std::vector<int> TimingEngine::getAffectedSetupPaths(const TimingMove& move) const {
+    return affectedPathIds(move, true);
+}
+
+std::vector<int> TimingEngine::getAffectedHoldPaths(const TimingMove& move) const {
+    return affectedPathIds(move, false);
+}
+
+IncrementalEvalResult TimingEngine::evaluateResizeMove(const std::string& node,
+                                                       const std::string& new_type) {
+    TimingMove move;
+    move.kind = TimingMoveKind::ResizeBuffer;
+    move.node = node;
+    move.new_type = new_type;
+    return evaluateMove(move);
+}
+
+IncrementalEvalResult TimingEngine::evaluateInsertChainMove(
+        const std::string& parent,
+        const std::string& child,
+        const std::vector<std::string>& chain_types) {
+    TimingMove move;
+    move.kind = TimingMoveKind::InsertChain;
+    move.parent = parent;
+    move.child = child;
+    move.chain_types = chain_types;
+    return evaluateMove(move);
+}
+
+IncrementalEvalResult TimingEngine::evaluateSubtreeMove(const TimingMove& move) {
+    // Both supported move kinds operate on every descendant sink of their
+    // target node/edge; moveDelta and the precomputed path incidence maps
+    // restrict evaluation to paths touching that subtree.
+    return evaluateMove(move);
+}
+
+bool TimingEngine::commitResizeMove(const std::string& node,
+                                    const std::string& new_type) {
+    TimingMove move;
+    move.kind = TimingMoveKind::ResizeBuffer;
+    move.node = node;
+    move.new_type = new_type;
+    std::vector<int> affected_sinks;
+    double delta_ss = 0.0, delta_ff = 0.0, delta_area = 0.0;
+    if (!moveDelta(move, affected_sinks, delta_ss, delta_ff, delta_area)) return false;
+
+    std::unordered_set<int> changed(affected_sinks.begin(), affected_sinks.end());
+    std::unordered_set<int> seen_setup;
+    std::unordered_set<int> seen_hold;
+    for (int sink : affected_sinks) {
+        sink_ss_delay[sink] += delta_ss;
+        sink_ff_delay[sink] += delta_ff;
+        for (int path_id : setup_launch_paths[sink]) {
+            if (!seen_setup.insert(path_id).second) continue;
+            PathState& path = setup_path_states[path_id];
+            const bool launch = changed.find(path.launch_sink) != changed.end();
+            const bool capture = changed.find(path.capture_sink) != changed.end();
+            const double delta = (capture ? delta_ss : 0.0) - (launch ? delta_ss : 0.0);
+            if (std::abs(delta) < 1e-15) continue;
+            removeSetupSlack(path.slack);
+            path.slack += delta;
+            addSetupSlack(path.slack);
+        }
+        for (int path_id : setup_capture_paths[sink]) {
+            if (!seen_setup.insert(path_id).second) continue;
+            PathState& path = setup_path_states[path_id];
+            const bool launch = changed.find(path.launch_sink) != changed.end();
+            const bool capture = changed.find(path.capture_sink) != changed.end();
+            const double delta = (capture ? delta_ss : 0.0) - (launch ? delta_ss : 0.0);
+            if (std::abs(delta) < 1e-15) continue;
+            removeSetupSlack(path.slack);
+            path.slack += delta;
+            addSetupSlack(path.slack);
+        }
+        for (int path_id : hold_launch_paths[sink]) {
+            if (!seen_hold.insert(path_id).second) continue;
+            PathState& path = hold_path_states[path_id];
+            const bool launch = changed.find(path.launch_sink) != changed.end();
+            const bool capture = changed.find(path.capture_sink) != changed.end();
+            const double delta = (launch ? delta_ff : 0.0) - (capture ? delta_ff : 0.0);
+            if (std::abs(delta) < 1e-15) continue;
+            removeHoldSlack(path.slack);
+            path.slack += delta;
+            addHoldSlack(path.slack);
+        }
+        for (int path_id : hold_capture_paths[sink]) {
+            if (!seen_hold.insert(path_id).second) continue;
+            PathState& path = hold_path_states[path_id];
+            const bool launch = changed.find(path.launch_sink) != changed.end();
+            const bool capture = changed.find(path.capture_sink) != changed.end();
+            const double delta = (launch ? delta_ff : 0.0) - (capture ? delta_ff : 0.0);
+            if (std::abs(delta) < 1e-15) continue;
+            removeHoldSlack(path.slack);
+            path.slack += delta;
+            addHoldSlack(path.slack);
+        }
+    }
+    clock_tree[node].type = new_type;
+    current_metrics.area += delta_area;
+    refreshWns();
+    return true;
+}
+
+bool TimingEngine::applyMove(const TimingMove& move, TimingRollback& rollback) {
+    std::vector<int> affected_sinks;
+    double delta_ss = 0.0, delta_ff = 0.0, delta_area = 0.0;
+    if (!moveDelta(move, affected_sinks, delta_ss, delta_ff, delta_area)) return false;
+
+    rollback.previous_tree = clock_tree;
+    rollback.valid = true;
+    if (move.kind == TimingMoveKind::ResizeBuffer) {
+        clock_tree[move.node].type = move.new_type;
+    } else {
+        if (move.chain_node_names.size() != move.chain_types.size()) {
+            rollbackMove(rollback);
+            return false;
+        }
+        for (const std::string& name : move.chain_node_names) {
+            if (name.empty() || clock_tree.find(name) != clock_tree.end()) {
+                rollbackMove(rollback);
+                return false;
+            }
+        }
+        ClockNode& parent = clock_tree[move.parent];
+        auto child_pos = std::find(parent.children.begin(), parent.children.end(), move.child);
+        if (child_pos == parent.children.end()) {
+            rollbackMove(rollback);
+            return false;
+        }
+        const int parent_level = parent.level;
+        *child_pos = move.chain_node_names.front();
+        for (std::size_t i = 0; i < move.chain_node_names.size(); ++i) {
+            ClockNode node;
+            node.name = move.chain_node_names[i];
+            node.type = move.chain_types[i];
+            node.parent = i == 0 ? move.parent : move.chain_node_names[i - 1];
+            node.level = parent_level + 1 + static_cast<int>(i);
+            node.children.push_back(i + 1 < move.chain_node_names.size()
+                                    ? move.chain_node_names[i + 1] : move.child);
+            clock_tree.emplace(node.name, std::move(node));
+        }
+        clock_tree[move.child].parent = move.chain_node_names.back();
+        const int child_level = parent_level + 1 + static_cast<int>(move.chain_node_names.size());
+        std::vector<std::pair<std::string, int> > stack{{move.child, child_level}};
+        while (!stack.empty()) {
+            const auto item = stack.back();
+            stack.pop_back();
+            ClockNode& node = clock_tree[item.first];
+            node.level = item.second;
+            for (const std::string& child : node.children) {
+                stack.push_back({child, item.second + 1});
+            }
+        }
+    }
+    rebuild();
+    return true;
+}
+
+bool TimingEngine::rollbackMove(TimingRollback& rollback) {
+    if (!rollback.valid) return false;
+    clock_tree.swap(rollback.previous_tree);
+    rollback.previous_tree.clear();
+    rollback.valid = false;
+    rebuild();
+    return true;
+}
+
 IncrementalEvalResult TimingEngine::evaluateMove(const TimingMove& move) {
     IncrementalEvalResult result;
     result.metrics = current_metrics;
@@ -411,6 +628,8 @@ IncrementalEvalResult TimingEngine::evaluateMove(const TimingMove& move) {
     refreshWns();
     result.metrics = current_metrics;
     result.affected_path_count = static_cast<int>(old_setup.size() + old_hold.size());
+    result.affected_setup_path_count = static_cast<int>(old_setup.size());
+    result.affected_hold_path_count = static_cast<int>(old_hold.size());
 
     for (std::size_t i = old_setup.size(); i > 0; --i) {
         int path_id = old_setup[i - 1].first;
